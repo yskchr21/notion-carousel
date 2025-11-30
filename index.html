@@ -109,18 +109,31 @@
                 const fetchUrl = `${N8N_WEBHOOK_URL}?folderId=${folderId}`;
                 
                 const response = await fetch(fetchUrl, {
-                    method: 'POST', // Changed to GET for simpler URL param handling
+                    method: 'POST', 
                     headers: { 'Content-Type': 'application/json' }
                 });
 
                 if (!response.ok) throw new Error(`Status: ${response.status}`);
 
                 const data = await response.json();
+                
+                // ** UPDATED LOGIC TO HANDLE ARRAY OR OBJECT RESPONSE **
+                let imagesList = [];
 
-                if (data.images && data.images.length > 0) {
-                    buildCarousel(data.images);
+                if (Array.isArray(data) && data.length > 0 && data[0].images) {
+                    // Case 1: n8n returned an array of objects: [ { "images": [...] } ]
+                    imagesList = data[0].images;
+                } else if (data.images && Array.isArray(data.images)) {
+                    // Case 2: n8n returned a single object: { "images": [...] }
+                    imagesList = data.images;
+                }
+                // ** END OF UPDATED LOGIC **
+
+
+                if (imagesList.length > 0) {
+                    buildCarousel(imagesList);
                 } else {
-                    loadingEl.innerText = 'No images found in this folder.';
+                    loadingEl.innerText = 'No images found in this folder or invalid response.';
                 }
 
             } catch (error) {
