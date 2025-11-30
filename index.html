@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notion Image Carousel</title>
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: transparent; }
+        
+        .n8n-carousel-container {
+            width: 100%;
+            height: 100vh; /* Full height of the iframe */
+            position: relative;
+            background-color: transparent; 
+        }
+
+        .n8n-carousel-slides {
+            display: flex;
+            transition: transform 0.5s ease-in-out;
+            height: 100%;
+            width: 100%;
+        }
+
+        .n8n-slide {
+            min-width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .n8n-slide img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain; /* Keeps aspect ratio */
+            border-radius: 4px;
+        }
+
+        .n8n-loading {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: #888;
+            font-size: 14px;
+        }
+
+        .n8n-prev, .n8n-next {
+            cursor: pointer;
+            position: absolute;
+            top: 50%;
+            width: auto;
+            padding: 12px;
+            margin-top: -22px;
+            color: white;
+            font-weight: bold;
+            font-size: 18px;
+            transition: 0.3s ease;
+            user-select: none;
+            background-color: rgba(0,0,0,0.2);
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .n8n-next { right: 10px; }
+        .n8n-prev { left: 10px; }
+        .n8n-prev:hover, .n8n-next:hover { background-color: rgba(0,0,0,0.6); }
+    </style>
+</head>
+<body>
+
+    <div class="n8n-carousel-container" id="n8nCarousel">
+        <div class="n8n-loading">Loading...</div>
+        <div class="n8n-carousel-slides" id="n8nSlidesWrapper"></div>
+        <button class="n8n-prev" onclick="moveSlide(-1)">&#10094;</button>
+        <button class="n8n-next" onclick="moveSlide(1)">&#10095;</button>
+    </div>
+
+    <script>
+        // --- CONFIGURATION ---
+        // Replace with your actual n8n Webhook URL (Production URL)
+        const N8N_WEBHOOK_URL = 'https://YOUR-N8N-INSTANCE/webhook/carousel'; 
+
+        let slideIndex = 0;
+        let totalSlides = 0;
+
+        // 1. Get folderId from URL (e.g., ?folderId=123xyz)
+        function getFolderId() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('folderId');
+        }
+
+        async function fetchImages() {
+            const folderId = getFolderId();
+            const loadingEl = document.querySelector('.n8n-loading');
+
+            if (!folderId) {
+                loadingEl.innerText = 'Error: No folderId found in URL.';
+                return;
+            }
+
+            try {
+                // Sending folderId as a query parameter to n8n
+                const fetchUrl = `${N8N_WEBHOOK_URL}?folderId=${folderId}`;
+                
+                const response = await fetch(fetchUrl, {
+                    method: 'GET', // Changed to GET for simpler URL param handling
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (!response.ok) throw new Error(`Status: ${response.status}`);
+
+                const data = await response.json();
+
+                if (data.images && data.images.length > 0) {
+                    buildCarousel(data.images);
+                } else {
+                    loadingEl.innerText = 'No images found in this folder.';
+                }
+
+            } catch (error) {
+                console.error(error);
+                loadingEl.innerText = 'Failed to load images.';
+            }
+        }
+
+        function buildCarousel(imageUrls) {
+            const wrapper = document.getElementById('n8nSlidesWrapper');
+            document.querySelector('.n8n-loading').style.display = 'none';
+            wrapper.innerHTML = '';
+
+            imageUrls.forEach(url => {
+                const slide = document.createElement('div');
+                slide.className = 'n8n-slide';
+                const img = document.createElement('img');
+                img.src = url;
+                slide.appendChild(img);
+                wrapper.appendChild(slide);
+            });
+
+            totalSlides = imageUrls.length;
+            showSlides(0);
+        }
+
+        function moveSlide(n) {
+            showSlides(slideIndex += n);
+        }
+
+        function showSlides(n) {
+            const slides = document.querySelectorAll('.n8n-slide');
+            if (slides.length === 0) return;
+            if (n >= totalSlides) slideIndex = 0;
+            if (n < 0) slideIndex = totalSlides - 1;
+            document.getElementById('n8nSlidesWrapper').style.transform = `translateX(-${slideIndex * 100}%)`;
+        }
+
+        fetchImages();
+    </script>
+</body>
+</html>
