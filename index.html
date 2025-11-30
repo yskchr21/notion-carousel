@@ -109,7 +109,7 @@
                 const fetchUrl = `${N8N_WEBHOOK_URL}?folderId=${folderId}`;
                 
                 const response = await fetch(fetchUrl, {
-                    method: 'GET', // Changed to GET for simpler URL param handling
+                    method: 'POST', // Changed to GET for simpler URL param handling
                     headers: { 'Content-Type': 'application/json' }
                 });
 
